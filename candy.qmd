@@ -1,0 +1,67 @@
+---
+title: "Untitled"
+format:
+  html:
+    theme: default
+    toc: true
+    number-sections: true
+---
+
+```{r}
+library(highcharter)
+library(purrr)
+library(geojsonio)
+library(httr)
+library(dplyr)
+library(accidentr)
+```
+
+```{r}
+data(Ita_Regions)
+ito <- Ita_Regions %>%
+  count(LuogoAccadimento)
+```
+
+
+```{r}
+url <- "http://code.highcharts.com/mapdata/countries/it/it-all.geo.json"
+tmpfile <- tempfile(fileext = ".json")
+download.file(url, tmpfile)
+```
+
+
+```{r}
+ita <- readLines(tmpfile)
+
+ita <- gsub(".* = ", "", ita)
+ita <- jsonlite::fromJSON(ita, simplifyVector = FALSE)
+
+x <- ita$features[[1]]
+x$properties
+
+dfita2 <-  ita$features %>% 
+  map_df(function(x){
+    data_frame(hasc = x$properties$hasc, name = x$properties$name)
+  }) %>%  # extract the keys
+  mutate(random = runif(nrow(.))) # create random value
+```
+```{r}
+#head(dfita2)
+#write.csv(dfita2, 'C:/Users/Asus/Downloads/quantide-mapIT-8665330/df.csv', row.names = FALSE)
+
+map <- read.csv('C:/Users/Asus/Downloads/quantide-mapIT-8665330/map.csv')
+map <- map[,-4:-7]
+head(map)
+
+df1 <- map %>% inner_join(ito, by = "LuogoAccadimento")
+```
+
+```{r}
+head(df1)
+highchart(type = "map") %>% 
+  hc_title(text = "Number of injuries by province") %>% 
+  hc_add_series_map(map = ita, df = df1, joinBy = "hasc", value = "n")
+
+```
+
+
